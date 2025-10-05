@@ -28,55 +28,78 @@ app.get('/', (req, res) => {
   }
 });
 
-// // --- Register page ---
-// app.get('/register', (req, res) => {
-//   res.sendFile(__dirname + '/views/register.html');
-// });
+// --- Register page ---
+app.get('/register', (req, res) => {
+  res.sendFile(__dirname + '/views/register.html');
+});
 
-// // // --- Register user ---
-// app.post('/register', async (req, res) => {
-//   const { username, password } = req.body;
+// // --- Register user ---
+app.post('/register', async (req, res) => {
+  try {
+    console.log(req.body);
+    const { username, password, role } = req.body;
 
-//   const hashedPassword = await bcrypt.hash(password, 10);
+    // Validate input
+    if (!username || !password || !role) {
+      return res.status(400).json({ success: false, message: 'All fields are required.' });
+    }
 
-//   db.query(
-//     'INSERT INTO users (username, password) VALUES (?, ?)',
-//     [username, hashedPassword],
-//     (err) => {
-//       if (err) {
-//         console.error(err);
-//         res.send('Error registering user.');
-//       } else {
-//         res.redirect('/');
-//       }
-//     }
-//   );
-// });
+    // Hash password
+    const hashedPassword = await bcrypt.hash(password, 10);
 
-// // --- Login user ---
-// app.post('/login', (req, res) => {
-//   const { username, password } = req.body;
+    // Correct query placeholders (3 values → 3 ?)
+    db.query(
+      'INSERT INTO users (username, password, role) VALUES (?, ?, ?)',
+      [username, hashedPassword, role],
+      (err, result) => {
+        if (err) {
+          console.error('Error inserting user:', err);
+          return res.status(500).json({ success: false, message: 'Database error', error: err });
+        }
 
-//   db.query(
-//     'SELECT * FROM users WHERE username = ?',
-//     [username],
-//     async (err, results) => {
-//       if (err || results.length === 0) {
-//         return res.send('User not found.');
-//       }
+        // Success response
+        return res.status(201).json({
+          success: true,
+          message: 'User registered successfully!',
+          data: {
+            id: result.insertId,
+            username,
+            role
+          }
+        });
+      }
+    );
+  } catch (error) {
+    console.error('Server error:', error);
+    return res.status(500).json({ success: false, message: 'Server error', error });
+  }
+});
 
-//       const user = results[0];
-//       const match = await bcrypt.compare(password, user.password);
 
-//       if (match) {
-//         req.session.username = user.username;
-//         res.redirect('/');
-//       } else {
-//         res.send('Incorrect password.');
-//       }
-//     }
-//   );
-// });
+// --- Login user ---
+app.post('/login', async (req, res) => {
+  const { username, password } = req.body;
+
+  // Find user
+  db.query('SELECT * FROM users WHERE username = ?', [username], async (err, results) => {
+    if (err) return res.status(500).json({ success: false, message: 'Database error' });
+    if (results.length === 0) return res.status(401).json({ success: false, message: 'User not found' });
+
+    const user = results[0];
+
+    // Compare password
+    const match = await bcrypt.compare(password, user.password);
+    if (!match) return res.status(401).json({ success: false, message: 'Incorrect password' });
+
+    // Success
+    return res.status(200).json({
+      success: true,
+      message: 'Login successful!',
+      role: user.role
+    });
+  });
+});
+
 
 // // --- Logout user ---
 // app.get('/logout', (req, res) => {

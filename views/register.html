@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Register</title>
+</head>
+<body>
+  <h2>Register</h2>
+  <form id="registerForm" method="POST">
+    <input type="text" name="username" placeholder="Enter username" required><br>
+    <input type="password" name="password" placeholder="Enter password" required><br>
+    <label for="role">Select Role</label>
+    <select name="role" id="role" required>
+      <option value="">-- Select Role --</option>
+      <option value="admin">Admin</option>
+      <option value="organizer">Organizer</option>
+      <option value="seller">Seller</option>
+      <option value="guest">Guest</option>
+    </select><br>
+    <button type="submit">Sign Up</button>
+  </form>
+
+  <p>Already have an account? <a href="/">Login here</a></p>
+
+   <script>
+    document.getElementById("registerForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const formData = Object.fromEntries(new FormData(e.target).entries());
+
+      const res = await fetch("/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData)
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        alert("Registration successful! Redirecting to login...");
+        window.location.href = "/"; // Redirect to login page
+      } else {
+        alert(result.message || "Something went wrong!");
+      }
+    });
+  </script>
+</body>
+</html>
